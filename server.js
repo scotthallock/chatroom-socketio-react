@@ -20,10 +20,29 @@ app.use("/", express.static(path.join(__dirname, "/dist")));
 
 app.get("/", (req, res) => res.sendFile(__dirname, "/dist/bundle.html"));
 
+const onlineUsers = new Set();
+
 io.on("connection", (socket) => {
-  console.log("a user connected");
-  console.log("thier ID is", socket.id);
-})
+  console.log(`A new user ${socket.id} connected!`);
+
+  // add the online user to the set
+  onlineUsers.add(socket.id);
+
+  logOnlineUsers();
+
+  socket.on("disconnect", (reason) => {
+    onlineUsers.delete(socket.id);
+    console.log(`The user ${socket.id} discconected because ${reason}.`);
+    logOnlineUsers();
+  });
+});
+
+const logOnlineUsers = () => {
+  console.log("===================================");
+  console.log("Here is a list of all online users:");
+  console.log(onlineUsers);
+  console.log("===================================");
+};
 
 httpServer.listen(3333, () => {
   console.log("listening on *:3333");
