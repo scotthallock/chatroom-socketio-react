@@ -10,8 +10,8 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const inputRef = useRef(null);
 
-  console.log("APP RENDER !!");
-  console.log(`You are ${onlineUsers[socket.id]?.name}`);
+  console.log("APP RENDER");
+  console.log(onlineUsers[socket.id]);
 
   useEffect(() => {
     const onConnect = () => setIsConnected(true);
@@ -32,7 +32,10 @@ export default function App() {
 
   useEffect(() => {
     const onReceiveMessage = (newMessage) => {
-      setMessages([...messages, newMessage]);
+      const newMessages = [newMessage, ...messages];
+      // only display last 200 messages
+      if (newMessages.length === 200) newMessages.pop();
+      setMessages(newMessages);
     };
 
     socket.on("receive-message", onReceiveMessage);
@@ -56,19 +59,35 @@ export default function App() {
     return e.key === "Enter" && sendMessage();
   };
 
-  const onlineUsersList = Object.values(onlineUsers).map((user) => (
-    <li key={user.id}>{user.username}</li>
-  ));
+  /* Create the JSX */
+
+  const onlineUsersList = Object.values(onlineUsers).map((user) => {
+    return (
+      <li key={user.id}>
+        <UserIcon user={user} />
+        <span>{user.username}</span>
+      </li>
+    );
+  });
+
+  const messageList = messages.map((msg) => {
+    return (
+      <div key={msg.id} className="message">
+        <UserIcon user={msg.user} />
+        <div className="username">{msg.user.username}</div>
+        <span className="content">{msg.content}</span>
+      </div>
+    );
+  });
 
   return (
     <div className="app-container">
       <div className="online-users-container">
-        <h1>Online</h1>
+        <h3>Online</h3>
         <ul>{onlineUsersList}</ul>
       </div>
-
       <div className="main-container">
-        <MessageDisplay messages={messages} />
+        <div className="messages-container">{messageList}</div>
         <div className="new-message-container">
           <input ref={inputRef} type="text" onKeyDown={handleKeyDown} />
           <button onClick={sendMessage}>Send</button>
@@ -78,15 +97,10 @@ export default function App() {
   );
 }
 
-function MessageDisplay({ messages }) {
-  const messageList = messages.map((msg) => {
-    return (
-      <div>
-        <span className="username">{msg.username}</span>
-        <span className="content">{msg.content}</span>
-      </div>
-    );
-  });
-
-  return <div className="messages-container">{messageList}</div>;
+function UserIcon({ user }) {
+  return (
+    <span className="user-icon" style={{ backgroundColor: user.color }}>
+      {user.username.split(" ").map(n => n[0]).join("")}
+    </span>
+  );
 }
