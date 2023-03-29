@@ -32,7 +32,7 @@ export default function App() {
 
   useEffect(() => {
     const onReceiveMessage = (newMessage) => {
-      const newMessages = [newMessage, ...messages];
+      const newMessages = [...messages, newMessage];
       // only display last 200 messages
       if (newMessages.length === 200) newMessages.pop();
       setMessages(newMessages);
@@ -65,33 +65,23 @@ export default function App() {
     return (
       <li key={user.id}>
         <UserIcon user={user} />
-        <span>{user.username}</span>
+        <span className="username">{user.username}</span>
       </li>
-    );
-  });
-
-  const messageList = messages.map((msg) => {
-    return (
-      <div key={msg.id} className="message">
-        <UserIcon user={msg.user} />
-        <div className="username">{msg.user.username}</div>
-        <span className="content">{msg.content}</span>
-      </div>
     );
   });
 
   return (
     <div className="app-container">
-      <div className="online-users-container">
-        <h3>Online</h3>
-        <ul>{onlineUsersList}</ul>
-      </div>
       <div className="main-container">
-        <div className="messages-container">{messageList}</div>
+        <MessageBoard messages={messages} />
         <div className="new-message-container">
           <input ref={inputRef} type="text" onKeyDown={handleKeyDown} />
           <button onClick={sendMessage}>Send</button>
         </div>
+      </div>
+      <div className="online-users-container">
+        <h3>Online</h3>
+        <ul>{onlineUsersList}</ul>
       </div>
     </div>
   );
@@ -100,7 +90,58 @@ export default function App() {
 function UserIcon({ user }) {
   return (
     <span className="user-icon" style={{ backgroundColor: user.color }}>
-      {user.username.split(" ").map(n => n[0]).join("")}
+      {user.username
+        .split(" ")
+        .map((n) => n[0])
+        .join("")}
     </span>
+  );
+}
+
+function MessageBoard({ messages }) {
+  const reducedMessages = messages.reduce(
+    (acc, msg) => {
+      const { list, prev } = acc;
+      // An "alert" message renders differently
+      // (When a user joins or leaves the chatroom)
+      if (msg.type.includes("alert")) {
+        list.push(
+          <div key={msg.id} className={`alert ${msg.type}`}>
+            <span>
+              <span className="username">{msg.user.username}</span>{" "}
+              {msg.content}
+            </span>
+          </div>
+        );
+        return { list, prev: msg };
+      }
+
+      // If a user sends multiple messages in a row
+      // Only display their username and icon with the first message
+      list.push(
+        <div key={msg.id} className="message">
+          {prev && prev.user.username === msg.user.username ? (
+            <div className="message-text">
+              <span className="content">{msg.content}</span>
+            </div>
+          ) : (
+            <>
+              <UserIcon user={msg.user} />
+              <div className="message-text">
+                <span className="username">{msg.user.username}</span>
+                <span className="content">{msg.content}</span>
+              </div>
+            </>
+          )}
+        </div>
+      );
+
+      return { list, prev: msg };
+    },
+    { list: [], prev: null }
+  );
+
+  return (
+    <div className="messages-container">{reducedMessages.list.reverse()}</div>
   );
 }
