@@ -10,25 +10,18 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const inputRef = useRef(null);
 
-  console.log("APP RENDER !!")
-  console.log(messages);
+  console.log("APP RENDER !!");
+  console.log(`You are ${onlineUsers[socket.id]?.name}`);
 
   useEffect(() => {
-    function onConnect() {
-      setIsConnected(true);
-      console.log(`User ${socket.id} connected!`);
-    }
-
-    function onDisconnect() {
-      setIsConnected(false);
-      console.log(`User ${socket.id} disconnected...`);
-    }
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
 
     // Register the event listeners
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("online-users", setOnlineUsers);
-   
+
     // Event registration cleanup (to prevent duplicate event registrations)
     return () => {
       socket.off("connect", onConnect);
@@ -38,9 +31,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    function onReceiveMessage(newMessage) {
+    const onReceiveMessage = (newMessage) => {
       setMessages([...messages, newMessage]);
-    }
+    };
 
     socket.on("receive-message", onReceiveMessage);
 
@@ -51,7 +44,11 @@ export default function App() {
 
   const sendMessage = () => {
     if (inputRef.current.value === "") return;
-    socket.emit("send-message", inputRef.current.value);
+    socket.emit("send-message", {
+      userId: socket.id,
+      content: inputRef.current.value,
+      timestamp: Date.now(),
+    });
     inputRef.current.value = "";
   };
 
@@ -59,23 +56,37 @@ export default function App() {
     return e.key === "Enter" && sendMessage();
   };
 
-  const onlineUsersList = Object.values(onlineUsers).map((user) => {
-    return (
-      <h6>
-        {user.name} ... {user.id}
-      </h6>
-    );
-  });
+  const onlineUsersList = Object.values(onlineUsers).map((user) => (
+    <li key={user.id}>{user.username}</li>
+  ));
 
   return (
-    <div>
-      <h1>Hello World Chatroom</h1>
-      <div>
-        <h3>Online users:</h3>
-        {onlineUsersList}
-        <input ref={inputRef} type="text" onKeyDown={handleKeyDown} />
-        <button onClick={sendMessage}>Click me</button>
+    <div className="app-container">
+      <div className="online-users-container">
+        <h1>Online</h1>
+        <ul>{onlineUsersList}</ul>
+      </div>
+
+      <div className="main-container">
+        <MessageDisplay messages={messages} />
+        <div className="new-message-container">
+          <input ref={inputRef} type="text" onKeyDown={handleKeyDown} />
+          <button onClick={sendMessage}>Send</button>
+        </div>
       </div>
     </div>
   );
+}
+
+function MessageDisplay({ messages }) {
+  const messageList = messages.map((msg) => {
+    return (
+      <div>
+        <span className="username">{msg.username}</span>
+        <span className="content">{msg.content}</span>
+      </div>
+    );
+  });
+
+  return <div className="messages-container">{messageList}</div>;
 }

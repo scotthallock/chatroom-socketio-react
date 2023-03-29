@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 
 import path from "path";
 import { fileURLToPath } from "url";
-import randomAnimalName from 'random-animal-name';
+import randomAnimalName from "random-animal-name";
 
 // Create __dirname variable because it is not available in ES modules
 // and we have set "type": "module" in our package.json
@@ -21,10 +21,9 @@ app.use("/", express.static(path.join(__dirname, "/dist")));
 
 app.get("/", (req, res) => res.sendFile(__dirname, "/dist/bundle.html"));
 
-
 /**
  * User object structure:
- * 
+ *
  * "asidpfaosdfakp1o2": {
  *    id: "asidpfaosdfakp1o2" // the socket.id
  *    name: "clever penguin" // randomly generated animal name
@@ -43,16 +42,20 @@ io.on("connection", (socket) => {
   // add the online user
   onlineUsers[socket.id] = {
     id: socket.id,
-    name: createUniqueName(),
+    username: createUniqueName(),
   };
 
   // tell everyone else that this user joined
   io.emit("online-users", onlineUsers);
 
-  socket.on("send-message", (message) => {
-    io.emit("receive-message", message);
-    console.log(message);
-  })
+  // send message to all clients
+  socket.on("send-message", ({ userId, content, timestamp }) => {
+    io.emit("receive-message", {
+      username: onlineUsers[userId].username, // swap id for name
+      content,
+      timestamp,
+    });
+  });
 
   socket.on("disconnect", (reason) => {
     delete onlineUsers[socket.id];
