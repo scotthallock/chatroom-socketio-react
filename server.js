@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 
 import path from "path";
 import { fileURLToPath } from "url";
+import randomAnimalName from 'random-animal-name';
 
 // Create __dirname variable because it is not available in ES modules
 // and we have set "type": "module" in our package.json
@@ -20,35 +21,52 @@ app.use("/", express.static(path.join(__dirname, "/dist")));
 
 app.get("/", (req, res) => res.sendFile(__dirname, "/dist/bundle.html"));
 
-const onlineUsers = [];
+
+/**
+ * User object structure:
+ * 
+ * "asidpfaosdfakp1o2": {
+ *    id: "asidpfaosdfakp1o2" // the socket.id
+ *    name: "clever penguin" // randomly generated animal name
+ * }
+ */
+
+const onlineUsers = {};
+const takenNames = new Set();
+
+const createUniqueName = () => {
+  const name = randomAnimalName();
+  return takenNames.has(name) ? createUniqueName() : name;
+};
 
 io.on("connection", (socket) => {
-  console.log(`A new user ${socket.id} connected!`);
+  // add the online user
+  onlineUsers[socket.id] = {
+    id: socket.id,
+    name: createUniqueName(),
+  };
 
-  // add the online user to the set
-  onlineUsers.push(socket.id);
-
+  // tell everyone else that this user joined
   io.emit("online-users", onlineUsers);
 
-  logOnlineUsers();
+  socket.on("send-message", (message) => {
+    io.emit("receive-message", message);
+    console.log(message);
+  })
 
   socket.on("disconnect", (reason) => {
-    // delete user from array
-    const index = onlineUsers.indexOf(socket.id);
-    onlineUsers.splice(index, 1);
-
-
-    console.log(`The user ${socket.id} disconnected because ${reason}.`);
+    delete onlineUsers[socket.id];
     io.emit("online-users", onlineUsers);
+    console.log(`The user ${socket.id} disconnected. (${reason})`);
   });
 });
 
-const logOnlineUsers = () => {
-  console.log("===================================");
-  console.log("Here is a list of all online users:");
-  console.log(onlineUsers);
-  console.log("===================================");
-};
+// const logOnlineUsers = () => {
+//   console.log("===================================");
+//   console.log("Here is a list of all online users:");
+//   console.log(onlineUsers);
+//   console.log("===================================");
+// };
 
 httpServer.listen(3333, () => {
   console.log("listening on *:3333");

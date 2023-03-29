@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { socket } from "./socket.js";
 
 // Helpful resource: Using Socket.IO with React
 // https://socket.io/how-to/use-with-react
 
 export default function App() {
-
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState({});
+  const [messages, setMessages] = useState([]);
+  const inputRef = useRef(null);
+
+  console.log("APP RENDER !!")
+  console.log(messages);
 
   useEffect(() => {
     function onConnect() {
@@ -16,39 +20,53 @@ export default function App() {
     }
 
     function onDisconnect() {
-      console.log(`User ${socket.id} disconnected...`);
       setIsConnected(false);
-    }
-
-    function logOnlineUsers(users) {
-      console.log("The online-users listener fired:")
-      console.log(users);
-      setOnlineUsers(users);
+      console.log(`User ${socket.id} disconnected...`);
     }
 
     // Register the event listeners
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on("online-users", logOnlineUsers)
-
-    // Event registration cleanup
-    // (to prevent duplicate event registrations)
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("online-users", setOnlineUsers);
+   
+    // Event registration cleanup (to prevent duplicate event registrations)
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('online-users', logOnlineUsers);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("online-users", setOnlineUsers);
     };
   }, []);
 
-  const handleClick = () => {
-    console.log("you clicked");
+  useEffect(() => {
+    function onReceiveMessage(newMessage) {
+      console.log("message received!", newMessage)
+      setMessages([...messages, newMessage]);
+    }
+
+    socket.on("receive-message", onReceiveMessage);
+
+    return () => {
+      socket.off("receive-message", onReceiveMessage);
+    };
+  }, [messages]);
+
+  const sendMessage = () => {
+    if (inputRef.current.value === "") return;
+    socket.emit("send-message", inputRef.current.value);
+    inputRef.current.value = "";
   };
 
-  const onlineUsersList = onlineUsers.map(e => {
-    return <h6>${e}</h6>;
-  });
+  const handleKeyDown = (e) => {
+    return e.key === "Enter" && sendMessage();
+  };
 
-  // ADD DISPLAY OF ALL ONLINE USERS
+  const onlineUsersList = Object.values(onlineUsers).map((user) => {
+    return (
+      <h6>
+        {user.name} ... {user.id}
+      </h6>
+    );
+  });
 
   return (
     <div>
@@ -56,7 +74,8 @@ export default function App() {
       <div>
         <h3>Online users:</h3>
         {onlineUsersList}
-        <button onClick={handleClick}>Click me</button>
+        <input ref={inputRef} type="text" onKeyDown={handleKeyDown} />
+        <button onClick={sendMessage}>Click me</button>
       </div>
     </div>
   );
