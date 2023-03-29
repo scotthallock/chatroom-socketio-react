@@ -39,7 +39,6 @@ export default function App() {
 
   useEffect(() => {
     function onReceiveMessage(newMessage) {
-      console.log("message received!", newMessage)
       setMessages([...messages, newMessage]);
     }
 
