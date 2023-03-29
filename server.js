@@ -20,20 +20,26 @@ app.use("/", express.static(path.join(__dirname, "/dist")));
 
 app.get("/", (req, res) => res.sendFile(__dirname, "/dist/bundle.html"));
 
-const onlineUsers = new Set();
+const onlineUsers = [];
 
 io.on("connection", (socket) => {
   console.log(`A new user ${socket.id} connected!`);
 
   // add the online user to the set
-  onlineUsers.add(socket.id);
+  onlineUsers.push(socket.id);
+
+  io.emit("online-users", onlineUsers);
 
   logOnlineUsers();
 
   socket.on("disconnect", (reason) => {
-    onlineUsers.delete(socket.id);
-    console.log(`The user ${socket.id} discconected because ${reason}.`);
-    logOnlineUsers();
+    // delete user from array
+    const index = onlineUsers.indexOf(socket.id);
+    onlineUsers.splice(index, 1);
+
+
+    console.log(`The user ${socket.id} disconnected because ${reason}.`);
+    io.emit("online-users", onlineUsers);
   });
 });
 

@@ -13,7 +13,6 @@ export default function App() {
     function onConnect() {
       setIsConnected(true);
       console.log(`User ${socket.id} connected!`);
-      setOnlineUsers([ ...onlineUsers, socket.id]);
     }
 
     function onDisconnect() {
@@ -21,24 +20,35 @@ export default function App() {
       setIsConnected(false);
     }
 
-    function onFooEvent(value) {
-      setFooEvents(previous => [...previous, value]);
+    function logOnlineUsers(users) {
+      console.log("The online-users listener fired:")
+      console.log(users);
+      setOnlineUsers(users);
     }
 
+    // Register the event listeners
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('foo', onFooEvent);
+    socket.on("online-users", logOnlineUsers)
 
+    // Event registration cleanup
+    // (to prevent duplicate event registrations)
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('foo', onFooEvent);
+      socket.off('online-users', logOnlineUsers);
     };
   }, []);
+
+  const handleClick = () => {
+    console.log("you clicked");
+  };
 
   const onlineUsersList = onlineUsers.map(e => {
     return <h6>${e}</h6>;
   });
+
+  // ADD DISPLAY OF ALL ONLINE USERS
 
   return (
     <div>
@@ -46,6 +56,7 @@ export default function App() {
       <div>
         <h3>Online users:</h3>
         {onlineUsersList}
+        <button onClick={handleClick}>Click me</button>
       </div>
     </div>
   );
