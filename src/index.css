@@ -161,10 +161,10 @@ li {
   padding: 0 10px;
 }
 .alert-green {
-  background-color: darkgreen;
+  background-color: #003300;
 }
 .alert-red {
-  background-color: darkred;
+  background-color: #4d0000;
 }
 
 .username {
@@ -173,7 +173,7 @@ li {
 
 .content {
   line-height: 25px;
-  word-break: break-all;
+  word-break: break-word;
   padding-right: 10px;
 }
 .content.username {
