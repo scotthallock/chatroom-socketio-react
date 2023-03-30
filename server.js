@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
+
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -20,7 +21,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer);
 
 const onlineUsers = {};
-const takenNames = new Set();
+const takenNames = new Set(); // using a Set for O(1) lookups of elements
 
 const createUniqueName = () => {
   const name = randomAnimalName();
@@ -48,20 +49,20 @@ io.on("connection", (socket) => {
     type: "alert-green",
     user: onlineUsers[socket.id],
     content: "has joined the chat",
-    timestamp: Date.now(),
   });
 
-  // send message to all clients
-  socket.on("send-message", ({ userId, content, timestamp }) => {
+  // fires when a client sent a message
+  socket.on("send-message", ({ userId, content }) => {
+    // send the message to all clients (including the sender)
     io.emit("receive-message", {
       id: uuidv4(), // id for the react "key" prop
       type: "message",
       user: onlineUsers[userId],
       content,
-      timestamp,
     });
   });
 
+  // fires when a client has disconnected (e.g. closed window)
   socket.on("disconnect", (reason) => {
     // tell everyone this user left the chat
     io.emit("receive-message", {
@@ -69,9 +70,8 @@ io.on("connection", (socket) => {
       type: "alert-red",
       user: onlineUsers[socket.id],
       content: "has left the chat",
-      timestamp: Date.now(),
     });
-
+    // send updated user list, too
     delete onlineUsers[socket.id];
     io.emit("online-users", onlineUsers);
   });

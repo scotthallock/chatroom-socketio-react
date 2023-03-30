@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { socket } from "./socket.js";
-
-// Helpful resource: Using Socket.IO with React
-// https://socket.io/how-to/use-with-react
+import UserIcon from "./components/UserIcon.js";
+import WelcomeMessage from "./components/WelcomeMessage.js";
+import MessageBoard from "./components/MessageBoard.js";
 
 export default function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [messages, setMessages] = useState([]);
   const inputRef = useRef(null);
-
-  console.log("APP RENDER");
-  console.log(onlineUsers[socket.id]);
 
   useEffect(() => {
     const onConnect = () => setIsConnected(true);
@@ -33,7 +30,7 @@ export default function App() {
   useEffect(() => {
     const onReceiveMessage = (newMessage) => {
       const newMessages = [...messages, newMessage];
-      // only display last 200 messages
+      // only save/display last 200 messages
       if (newMessages.length === 200) newMessages.pop();
       setMessages(newMessages);
     };
@@ -47,19 +44,18 @@ export default function App() {
 
   const sendMessage = () => {
     if (inputRef.current.value === "") return;
+
     socket.emit("send-message", {
       userId: socket.id,
       content: inputRef.current.value,
-      timestamp: Date.now(),
     });
+
     inputRef.current.value = "";
   };
 
-  const handleKeyDown = (e) => {
-    return e.key === "Enter" && sendMessage();
-  };
+  const handleKeyDown = (e) => e.key === "Enter" && sendMessage();
 
-  /* Create the JSX */
+  const thisUser = onlineUsers[socket.id];
 
   const onlineUsersList = Object.values(onlineUsers).map((user) => {
     return (
@@ -71,77 +67,32 @@ export default function App() {
   });
 
   return (
-    <div className="app-container">
-      <div className="main-container">
-        <MessageBoard messages={messages} />
-        <div className="new-message-container">
-          <input ref={inputRef} type="text" onKeyDown={handleKeyDown} />
-          <button onClick={sendMessage}>Send</button>
-        </div>
-      </div>
-      <div className="online-users-container">
-        <h3>Online</h3>
-        <ul>{onlineUsersList}</ul>
-      </div>
-    </div>
-  );
-}
-
-function UserIcon({ user }) {
-  return (
-    <span className="user-icon" style={{ backgroundColor: user.color }}>
-      {user.username
-        .split(" ")
-        .map((n) => n[0])
-        .join("")}
-    </span>
-  );
-}
-
-function MessageBoard({ messages }) {
-  const reducedMessages = messages.reduce(
-    (acc, msg) => {
-      const { list, prev } = acc;
-      // An "alert" message renders differently
-      // (When a user joins or leaves the chatroom)
-      if (msg.type.includes("alert")) {
-        list.push(
-          <div key={msg.id} className={`alert ${msg.type}`}>
-            <span>
-              <span className="username">{msg.user.username}</span>{" "}
-              {msg.content}
-            </span>
+    <>
+      <WelcomeMessage user={thisUser} isConnected={isConnected} />
+      <div className="app-container">
+        <div className="main-container">
+          <MessageBoard messages={messages} />
+          <div className="new-message-container">
+            <input
+              ref={inputRef}
+              placeholder="Message the chatroom"
+              className="input-message"
+              type="text"
+              onKeyDown={handleKeyDown}
+            />
+            <button className="send-button" onClick={sendMessage}>
+              Send
+            </button>
           </div>
-        );
-        return { list, prev: msg };
-      }
-
-      // If a user sends multiple messages in a row
-      // Only display their username and icon with the first message
-      list.push(
-        <div key={msg.id} className="message">
-          {prev && prev.user.username === msg.user.username ? (
-            <div className="message-text">
-              <span className="content">{msg.content}</span>
-            </div>
-          ) : (
-            <>
-              <UserIcon user={msg.user} />
-              <div className="message-text">
-                <span className="username">{msg.user.username}</span>
-                <span className="content">{msg.content}</span>
-              </div>
-            </>
-          )}
         </div>
-      );
-
-      return { list, prev: msg };
-    },
-    { list: [], prev: null }
-  );
-
-  return (
-    <div className="messages-container">{reducedMessages.list.reverse()}</div>
+        <div className="online-users-container">
+          <h3>Online</h3>
+          <ul>{onlineUsersList}</ul>
+        </div>
+      </div>
+      <p className="info">
+        To demo this app, open another tab/window with the same URL and chat away!
+      </p>
+    </>
   );
 }
